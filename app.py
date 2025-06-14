@@ -456,7 +456,7 @@ with st.sidebar:
 header_container = st.container()
 with header_container:
     # Menggunakan fungsi untuk menyisipkan logo sebagai HTML string di dalam H1
-    logo_path_header = "acenesence_logo_logo.png" # Pastikan ini adalah path ke file logo ikon Anda
+    logo_path_header = "acenesence_logo.png" # Pastikan ini adalah path ke file logo ikon Anda
     
     # Kontrol ukuran dan margin logo di dalam teks
     logo_html_string = get_image_as_base64_html(logo_path_header, height_em=1.0, margin_right_em=0.3) 
