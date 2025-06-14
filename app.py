@@ -1,16 +1,11 @@
 import streamlit as st
 
-# import tensorflow as tf
-# from tensorflow.keras import layers, Model
-# from tensorflow.keras.metrics import Precision, Recall
-
 from PIL import Image, ImageOps
 import numpy as np
 import pandas as pd
 import io
 import os
 import random
-#import matplotlib.pyplot as plt # Tetap diperlukan untuk plot bar chart
 import json
 from datetime import datetime
 import base64 # Import library base64
