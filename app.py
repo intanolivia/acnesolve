@@ -623,6 +623,7 @@ if 'acne_prediction_results' in st.session_state and st.session_state['acne_pred
     ax.title.set_color(plt.rcParams['text.color'])
     
     fig.patch.set_facecolor(st.get_option("theme.backgroundColor"))
+    ax.set_facecolor(st.get_option("theme.backgroundColor"))
 
     plt.tight_layout()
     st.pyplot(fig)
