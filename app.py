@@ -5,10 +5,10 @@ import pandas as pd
 import io
 import os
 import random
-import matplotlib.pyplot as plt # Diperlukan untuk plot bar chart
+import matplotlib.pyplot as plt 
 import json
 from datetime import datetime
-import base64 # Diperlukan untuk menyisipkan gambar sebagai Base64
+import base64 
 
 # --- Konfigurasi Halaman Streamlit ---
 st.set_page_config(
