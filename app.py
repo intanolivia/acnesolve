@@ -62,34 +62,6 @@ def add_journal_entry(image_bytes, note):
 journal_entries = load_journal_entries()
 
 # --- Fungsi untuk Memuat Data Rekomendasi dan Kelas (Tanpa Model ML) ---
-@st.cache_resource # Tetap gunakan cache untuk efisiensi
-def load_assets_without_ml_model():
-    """Loads label file and sets up dummy model/class_names."""
-    labels_path = "labels.txt"
-
-    if not os.path.exists(labels_path):
-        st.error(f"❌ ERROR: Labels file '{labels_path}' NOT FOUND.")
-        st.info(f"Pastikan '{labels_path}' ada di direktori yang sama dengan aplikasi.")
-        return None, None # Mengembalikan None untuk 'model'
-
-    try:
-        # Tidak ada loading model ML di sini
-        # st.sidebar.info("Initializing application assets...") # Pesan ini juga dihapus untuk tampilan bersih
-        
-        with open(labels_path, "r") as f:
-            class_names = [line.strip() for line in f.readlines()]
-
-        if not class_names:
-            st.error("❌ `labels.txt` is empty or does not contain class names. Please check the file.")
-            return None, None
-        
-        # st.sidebar.success("✅ Application assets loaded successfully!") # Pesan ini juga dihapus
-        
-        return None, class_names # Mengembalikan None untuk 'model'
-    except Exception as e:
-        st.error(f"❌ Failed to load application assets: {e}")
-        st.warning("Penyebab umum: file `labels.txt` rusak atau tidak ada.")
-        return None, None
 
 @st.cache_data
 def load_recommendation_data():
