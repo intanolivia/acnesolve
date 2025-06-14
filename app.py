@@ -6,6 +6,7 @@ import pandas as pd
 import io
 import os
 import random
+import matplotlib.pyplot as plt # Tetap diperlukan untuk plot bar chart
 import json
 from datetime import datetime
 import base64 # Import library base64
@@ -20,7 +21,7 @@ st.set_page_config(
 
 np.set_printoptions(suppress=True)
 # Hapus konfigurasi logger TensorFlow
-# tf.get_logger().setLevel('ERROR')
+# tf.get_logger().setLevel('ERROR') # Baris ini tidak lagi relevan tanpa TensorFlow
 
 JOURNAL_DIR = "progress_journal_data"
 JOURNAL_METADATA_FILE = os.path.join(JOURNAL_DIR, "journal_metadata.json")
@@ -61,7 +62,31 @@ def add_journal_entry(image_bytes, note):
 
 journal_entries = load_journal_entries()
 
-# --- Fungsi untuk Memuat Data Rekomendasi dan Kelas (Tanpa Model ML) ---
+# --- Fungsi untuk Memuat Data Aplikasi (Tanpa Model ML) ---
+@st.cache_resource # Tetap gunakan cache untuk efisiensi
+def load_app_assets(): # Nama fungsi diubah
+    """Loads label file and provides dummy model/class_names."""
+    labels_path = "labels.txt"
+
+    if not os.path.exists(labels_path):
+        st.error(f"❌ ERROR: Labels file '{labels_path}' NOT FOUND.")
+        st.info(f"Pastikan '{labels_path}' ada di direktori yang sama dengan aplikasi.")
+        return None, None # Mengembalikan None untuk 'model'
+    
+    try:
+        with open(labels_path, "r") as f:
+            class_names = [line.strip() for line in f.readlines()]
+
+        if not class_names:
+            st.error("❌ `labels.txt` is empty or does not contain class names. Please check the file.")
+            return None, None
+        
+        # 'model' sekarang akan selalu None karena tidak ada ML model
+        return None, class_names 
+    except Exception as e:
+        st.error(f"❌ Failed to load application assets: {e}")
+        st.warning("Penyebab umum: file `labels.txt` rusak atau tidak ada.")
+        return None, None
 
 @st.cache_data
 def load_recommendation_data():
@@ -105,8 +130,8 @@ def get_image_as_base64_html(image_path, height_em=1.2, margin_right_em=0.2):
         return f"<span style='color:red;'>Error loading logo: {e}</span>"
 
 
-# Muat semua aset (tanpa ML Model) dan data di awal aplikasi
-model, class_names = load_assets_without_ml_model() # Mengganti load_ml_assets
+# Muat semua aset aplikasi dan data rekomendasi
+model, class_names = load_app_assets() # Panggil fungsi yang sudah dimodifikasi
 df_pengobatan = load_recommendation_data()
 
 # Mapping untuk tipe kulit dari Streamlit ke nilai di kolom 'jenis kulit' CSV
@@ -115,7 +140,7 @@ SKIN_TYPE_MAP_TO_CSV = {
 }
 
 DID_YOU_KNOW_FACTS = [
-    "Tahukah Anda? Mencuci muka dua kali sehari sudah cukup. Terlalu sering bisa mengiritasi kulit!", "Tahukah Anda? Stres dapat memicu jerawat. Kelola stres dengan baik untuk kulit yang lebih sehat!", "Tahukah Anda? Sarung bantal kotor bisa jadi sarang bakteri penyebab jerawat. Ganti secara rutin!", "Tahukah Anda? SPF itu wajib, bahkan untuk kulit berjerawat! Pilih yang non-comedogenic.", "Tahukah Anda? Jangan memencet jerawat! Ini bisa memperparah peradangan dan meninggalkan bekas luka.", "Tahukah Anda? Asupan gula berlebih bisa memperburuk jerawat. Kurangi makanan manis untuk kulit lebih baik.", "Tahukah Anda? Produk non-comedogenic berarti tidak akan menyumbat pori-pori.", "Tahukah Anda? Antibiotik oral untuk jerawat harus digunakan di bawah pengawasan dokter."
+    "Tahukah Anda? Mencuci muka dua kali sehari sudah cukup. Terlalu sering bisa mengiritasi kulit!", "Tahukah Anda? Stres dapat memicu jerawat. Kelola stres dengan baik untuk kulit yang lebih sehat.", "Tahukah Anda? Sarung bantal kotor bisa jadi sarang bakteri penyebab jerawat. Ganti secara rutin!", "Tahukah Anda? SPF itu wajib, bahkan untuk kulit berjerawat! Pilih yang non-comedogenic.", "Tahukah Anda? Jangan memencet jerawat! Ini bisa memperparah peradangan dan meninggalkan bekas luka.", "Tahukah Anda? Asupan gula berlebih bisa memperburuk jerawat. Kurangi makanan manis untuk kulit lebih baik.", "Tahukah Anda? Produk non-comedogenic berarti tidak akan menyumbat pori-pori.", "Tahukah Anda? Antibiotik oral untuk jerawat harus digunakan di bawah pengawasan dokter."
 ]
 
 MYTH_FACT_PAIRS = [
@@ -228,13 +253,6 @@ st.markdown("""
         padding: 0.7rem;
         font-family: 'Poppins', sans-serif;
         font-size: 1rem;
-    }
-    .stFileUploader>div>div>button {
-        background-color: var(--macaroon-light-bg);
-        color: var(--macaroon-text);
-        border: 1px solid var(--macaroon-border);
-        box-shadow: none;
-        transition: all 0.2s ease;
     }
     .stFileUploader>div>div>button:hover {
         background-color: #F0EDED;
@@ -361,12 +379,11 @@ with st.sidebar:
 
     st.markdown("## Tentang Aplikasi ✨")
     st.markdown("""
-        **AcneSolve** memanfaatkan teknologi *deep learning* untuk menganalisis gambar jerawat Anda
-        dan mengklasifikasikannya ke dalam beberapa jenis umum. Berdasarkan deteksi tersebut,
-        aplikasi ini akan memberikan rekomendasi produk dan kandungan skincare yang sesuai.
+        **AcneSolve** adalah aplikasi untuk membantu Anda mengidentifikasi jenis jerawat
+        dan mendapatkan rekomendasi perawatan personal untuk kulit sehat.
         
         **Catatan Penting:**
-        * Hasil deteksi adalah perkiraan dan bukan pengganti diagnosis medis.
+        * Hasil deteksi adalah **simulasi/perkiraan** dan bukan pengganti diagnosis medis.
         * Selalu konsultasikan dengan dokter kulit atau dermatologis untuk masalah kulit yang serius atau persisten.
         
         Aplikasi ini dibuat dengan ❤️ dan Streamlit.
@@ -435,15 +452,13 @@ with st.sidebar:
 header_container = st.container()
 with header_container:
     # Menggunakan fungsi untuk menyisipkan logo sebagai HTML string di dalam H1
-    logo_path_header = "acenesence_logo.png" # Path ke logo icon Anda
+    logo_path_header = "acenesence_logo.png" # Path ke logo icon Anda (Pastikan ini ada!)
     
     # Kontrol ukuran dan margin logo di dalam teks
-    # Adjust height_em to fit well with your 'AcneSolve' text
     logo_html_string = get_image_as_base64_html(logo_path_header, height_em=1.0, margin_right_em=0.3) 
     
-    # Pastikan Anda punya logo di tengah teks "AcneSolve"
     st.markdown(f"<h1 class='main-header'>Acne{logo_html_string}Solve 🌸</h1>", unsafe_allow_html=True)
-    st.write("""Detect your acne type and get personalized treatment recommendations for healthy skin!""")
+    st.write("""Aplikasi untuk membantu Anda mengidentifikasi jenis jerawat dan mendapatkan rekomendasi perawatan personal untuk kulit sehat!""")
     st.markdown("---")
 
 st.markdown("<h2 class='subheader'>📸 Take or Upload Your Acne Image</h2>", unsafe_allow_html=True)
@@ -453,7 +468,7 @@ method = st.radio("How do you want to upload the image?", ("Gunakan Kamera", "Un
 img_data = None
 
 if method == "Gunakan Kamera":
-    st.info("💡 **Tips:** Ensure optimal lighting and focus the camera on the acne area.")
+    st.info("💡 **Tips:** Pastikan pencahayaan optimal dan fokuskan kamera pada area jerawat.")
     img_file_buffer = st.camera_input("Klik untuk mengambil gambar")
     if img_file_buffer is not None:
         img_data = img_file_buffer.read()
@@ -485,16 +500,14 @@ st.markdown("---")
 
 col_button_detect, col_button_clear = st.columns(2)
 
-# Definisikan dummy class_names jika load_ml_assets mengembalikan None
-DUMMY_CLASS_NAMES = ["lv0", "blackhead", "whitehead", "papule", "pustule", "cystic"]
-# Pastikan jumlah kelas ini sesuai dengan yang diharapkan oleh logic Anda
-# Ini contoh jika ada 6 kelas termasuk 'lv0' (No Acne)
+# Definisikan dummy class_names (ini akan digunakan untuk simulasi)
+# Pastikan ini sesuai dengan daftar kelas yang ada di labels.txt Anda
+# Contoh: jika labels.txt berisi 5 jenis jerawat + lv0 (No Acne)
+DUMMY_CLASS_NAMES = ["lv0", "blackhead", "whitehead", "papule", "pustule", "cystic"] 
 
 with col_button_detect:
     if st.button("Start Acne Detection", key="detect_button", use_container_width=True):
-        # Model sekarang akan selalu None, jadi sesuaikan logika ini
-        # if model is None or class_names is None or df_pengobatan is None:
-        # Menjadi:
+        # Periksa hanya class_names dan df_pengobatan, karena model sekarang selalu None
         if class_names is None or df_pengobatan is None:
             st.error("❌ Aplikasi belum siap: Daftar jenis jerawat atau data rekomendasi gagal dimuat.")
         elif img_data is None:
@@ -502,43 +515,38 @@ with col_button_detect:
         else:
             with st.spinner("⏳ Menganalisis gambar Anda. Mohon tunggu..."):
                 try:
-                    # Logika prediksi dummy karena tidak ada model ML
-                    # Anda bisa membuat prediksi acak atau berdasarkan aturan sederhana
-                    
-                    # Simulasikan deteksi jenis jerawat secara acak
-                    # Pastikan list DUMMY_CLASS_NAMES sesuai dengan yang Anda inginkan
-                    # sebagai output prediksi.
+                    # Ini adalah logika prediksi dummy/simulasi tanpa model ML
+                    # Pilih kelas secara acak dari DUMMY_CLASS_NAMES
                     acne_class_raw_simulated = random.choice(DUMMY_CLASS_NAMES)
                     
-                    # Simulasikan skor kepercayaan acak
-                    acne_confidence_simulated = random.uniform(0.6, 0.99) # Skor kepercayaan yang cukup tinggi
+                    # Berikan skor kepercayaan acak yang realistis
+                    acne_confidence_simulated = random.uniform(0.6, 0.99) 
                     
-                    # Simulasikan array prediksi untuk bar chart
+                    # Buat array prediksi dummy untuk plotting bar chart
+                    # Distribusikan probabilitas ke semua kelas
                     num_classes_simulated = len(DUMMY_CLASS_NAMES)
-                    simulated_prediction_array = np.zeros((1, num_classes_simulated))
-                    # Isi satu indeks dengan confidence yang disimulasikan
-                    simulated_prediction_array[0, DUMMY_CLASS_NAMES.index(acne_class_raw_simulated)] = acne_confidence_simulated
-                    # Distribusikan sisa probabilitas ke kelas lain secara acak agar totalnya mendekati 1
-                    remaining_prob = 1.0 - acne_confidence_simulated
-                    if num_classes_simulated > 1:
-                        other_indices = [i for i, _ in enumerate(DUMMY_CLASS_NAMES) if i != DUMMY_CLASS_NAMES.index(acne_class_raw_simulated)]
-                        if len(other_indices) > 0:
-                            random_probs_others = np.random.dirichlet(np.ones(len(other_indices))) * remaining_prob
-                            for i, idx in enumerate(other_indices):
-                                simulated_prediction_array[0, idx] = random_probs_others[i]
+                    simulated_prediction_array = np.random.dirichlet(np.ones(num_classes_simulated)) # Distribusi probabilitas ke semua kelas
+                    # Set probabilitas kelas yang dipilih secara acak menjadi confidence yang disimulasikan
+                    simulated_prediction_array[DUMMY_CLASS_NAMES.index(acne_class_raw_simulated)] = acne_confidence_simulated
+                    # Normalisasi ulang jika diperlukan agar totalnya 1 (dirichlet sudah menjaminnya)
+                    simulated_prediction_array /= simulated_prediction_array.sum()
                     
+                    # Bungkus dalam format yang diharapkan oleh bagian hasil
+                    acne_prediction_for_display = np.array([simulated_prediction_array])
+
+
                     st.session_state['acne_prediction_results'] = {
-                        'prediction': simulated_prediction_array, # Gunakan array prediksi yang disimulasikan
-                        'img_data': img_data, 
+                        'prediction': acne_prediction_for_display, # Gunakan array prediksi yang disimulasikan untuk plot
+                        'img_data': img_data, # Simpan data gambar asli
                         'skin_type': skin_type,
-                        'simulated_class_raw': acne_class_raw_simulated, # Simpan juga hasil simulasi mentah
-                        'simulated_confidence': acne_confidence_simulated # Simpan juga confidence simulasi
+                        'simulated_class_raw': acne_class_raw_simulated, # Simpan hasil kelas simulasi
+                        'simulated_confidence': acne_confidence_simulated # Simpan confidence simulasi
                     }
                     st.experimental_rerun()
                     
                 except Exception as e:
-                    st.error(f"❌ Terjadi kesalahan saat memproses gambar atau simulasi deteksi: {e}")
-                    st.info("Pastikan gambar jelas dan sesuai. Cek juga konsol untuk detail error.")
+                    st.error(f"❌ An error occurred during image processing or simulation: {e}")
+                    st.info("Ensure the image is clear and suitable. Check the console for error details.")
 
 with col_button_clear:
     if st.button("Restart / Clear", key="clear_button", use_container_width=True):
@@ -550,15 +558,13 @@ if 'acne_prediction_results' in st.session_state and st.session_state['acne_pred
     st.markdown("<h2 class='subheader'>✨ Your Skin Analysis Results</h2>", unsafe_allow_html=True)
     
     results = st.session_state['acne_prediction_results']
-    # Ambil hasil simulasi langsung
-    acne_prediction = results['prediction'] # Ini adalah array dummy untuk plot
+    acne_prediction_for_plot = results['prediction'] # Array untuk plot
     skin_type = results['skin_type']
     original_img_data = results['img_data']
     
-    # Ambil hasil simulasi langsung dari session_state
+    # Ambil hasil simulasi langsung
     acne_class_raw = results['simulated_class_raw']
     acne_confidence = results['simulated_confidence']
-
 
     acne_class_for_csv = acne_class_raw.lower()
     if acne_class_for_csv == 'blackheads': acne_class_for_csv = 'blackhead'
@@ -570,7 +576,7 @@ if 'acne_prediction_results' in st.session_state and st.session_state['acne_pred
 
     st.markdown(f"""
     <div class="acne-result-box">
-        <p style="font-size:1.2rem; font-weight:bold; color:var(--macaroon-main-header);">Main Detection: <b>{acne_class_raw.upper()}</b></p>
+        <p style="font-size:1.2rem; font-weight:bold; color:var(--macaroon-main-header);">Main Detection (Simulated): <b>{acne_class_raw.upper()}</b></p>
         <p style="font-size:1rem; color:var(--macaroon-main-header);">Confidence Score: {acne_confidence:.2f}</p>
     </div>
     """, unsafe_allow_html=True)
@@ -597,9 +603,9 @@ if 'acne_prediction_results' in st.session_state and st.session_state['acne_pred
     st.markdown("### Detail Prediction Score:")
     fig, ax = plt.subplots(figsize=(8, 4))
     
-    # Gunakan DUMMY_CLASS_NAMES untuk plot
+    # Gunakan DUMMY_CLASS_NAMES untuk label plot
     classes_display = [c.replace('lv0', 'No Acne').upper() for c in DUMMY_CLASS_NAMES]
-    confidences = acne_prediction[0] # Menggunakan array prediksi yang disimulasikan
+    confidences = acne_prediction_for_plot[0] # Menggunakan array prediksi yang disimulasikan
     
     sorted_indices = np.argsort(confidences)[::-1]
     sorted_classes = [classes_display[i] for i in sorted_indices]
@@ -607,7 +613,7 @@ if 'acne_prediction_results' in st.session_state and st.session_state['acne_pred
 
     ax.barh(sorted_classes, sorted_confidences, color='#A8DADC')
     ax.set_xlabel("Confidence Score")
-    ax.set_title("Probability Prediction of Acne Types (Simulated)") # Tambahkan (Simulated)
+    ax.set_title("Probability Prediction of Acne Types (Simulated)")
     ax.set_xlim(0, 1)
     for i, v in enumerate(sorted_confidences):
         ax.text(v + 0.02, i, f"{v:.2f}", color=plt.rcParams['text.color'], va='center')
