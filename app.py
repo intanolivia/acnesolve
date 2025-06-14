@@ -461,7 +461,7 @@ with header_container:
     # Kontrol ukuran dan margin logo di dalam teks
     logo_html_string = get_image_as_base64_html(logo_path_header, height_em=10.0, margin_right_em=1) 
     
-    st.markdown(f"<h1 class='main-header'>{logo_html_string}🌸</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h1 class='main-header'>{logo_html_string}</h1>", unsafe_allow_html=True)
     st.write("""Aplikasi untuk membantu Anda mengidentifikasi jenis jerawat dan mendapatkan rekomendasi perawatan personal untuk kulit sehat!""")
     st.markdown("---")
 
