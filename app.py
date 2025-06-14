@@ -5,7 +5,6 @@ import pandas as pd
 import io
 import os
 import random
-import matplotlib.pyplot as plt # Diperlukan untuk plot bar chart
 import json
 from datetime import datetime
 import base64 # Diperlukan untuk menyisipkan gambar sebagai Base64
