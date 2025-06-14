@@ -9,7 +9,7 @@ import pandas as pd
 import io
 import os
 import random
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import json
 from datetime import datetime
 
