@@ -1,4 +1,8 @@
 import streamlit as st
+# Hapus semua import TensorFlow/Keras
+# import tensorflow as tf
+# from tensorflow.keras import layers, Model
+# from tensorflow.keras.metrics import Precision, Recall
 
 from PIL import Image, ImageOps
 import numpy as np
@@ -6,12 +10,12 @@ import pandas as pd
 import io
 import os
 import random
-import matplotlib.pyplot as plt # Tetap diperlukan untuk plot bar chart
+import matplotlib.pyplot as plt # Diperlukan untuk plot bar chart
 import json
 from datetime import datetime
-import base64 # Import library base64
+import base64 # Diperlukan untuk menyisipkan gambar sebagai Base64
 
-# --- Streamlit Page Configuration ---
+# --- Konfigurasi Halaman Streamlit ---
 st.set_page_config(
     page_title="AcneSolve: Deteksi & Rekomendasi Jerawat",
     page_icon="🌸",
@@ -20,9 +24,9 @@ st.set_page_config(
 )
 
 np.set_printoptions(suppress=True)
-# Hapus konfigurasi logger TensorFlow
-# tf.get_logger().setLevel('ERROR') # Baris ini tidak lagi relevan tanpa TensorFlow
+# tf.get_logger().setLevel('ERROR') # Hapus ini karena tidak ada TensorFlow
 
+# --- Jurnal Progres Kulit: Konfigurasi dan Fungsi ---
 JOURNAL_DIR = "progress_journal_data"
 JOURNAL_METADATA_FILE = os.path.join(JOURNAL_DIR, "journal_metadata.json")
 
@@ -46,7 +50,7 @@ def add_journal_entry(image_bytes, note):
         image_filename = f"progress_image_{timestamp}.jpg"
         image_path = os.path.join(JOURNAL_DIR, image_filename)
         
-        img_pil.save(image_path, format="JPEG")
+        img_pil.save(image_path, format="JPEG") # Simpan sebagai JPG untuk konsistensi
 
         new_entry = {
             "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -65,13 +69,13 @@ journal_entries = load_journal_entries()
 # --- Fungsi untuk Memuat Data Aplikasi (Tanpa Model ML) ---
 @st.cache_resource # Tetap gunakan cache untuk efisiensi
 def load_app_assets(): # Nama fungsi diubah
-    """Loads label file and provides dummy model/class_names."""
-    labels_path = "labels.txt"
+    """Loads label file and provides dummy class_names."""
+    labels_path = "labels.txt" # Lokasi file labels Anda
 
     if not os.path.exists(labels_path):
         st.error(f"❌ ERROR: Labels file '{labels_path}' NOT FOUND.")
         st.info(f"Pastikan '{labels_path}' ada di direktori yang sama dengan aplikasi.")
-        return None, None # Mengembalikan None untuk 'model'
+        return None # Mengembalikan None jika labels.txt tidak ditemukan
     
     try:
         with open(labels_path, "r") as f:
@@ -79,23 +83,23 @@ def load_app_assets(): # Nama fungsi diubah
 
         if not class_names:
             st.error("❌ `labels.txt` is empty or does not contain class names. Please check the file.")
-            return None, None
+            return None
         
-        # 'model' sekarang akan selalu None karena tidak ada ML model
-        return None, class_names 
+        # Mengembalikan DUMMY_MODEL_PLACEHOLDER sebagai pengganti objek model
+        return class_names 
     except Exception as e:
         st.error(f"❌ Failed to load application assets: {e}")
         st.warning("Penyebab umum: file `labels.txt` rusak atau tidak ada.")
-        return None, None
+        return None
 
 @st.cache_data
 def load_recommendation_data():
     """Loads recommendation data from CSV."""
-    csv_path = "pengobatan.csv"
+    csv_path = "pengobatan.csv" # Lokasi file rekomendasi Anda
 
     if not os.path.exists(csv_path):
         st.error(f"❌ ERROR: Recommendation file '{csv_path}' NOT FOUND.")
-        st.info(f"Ensure '{csv_path}' is in the same directory as this app.")
+        st.info(f"Pastikan '{csv_path}' is in the same directory as this app.")
         return None
 
     try:
@@ -117,7 +121,7 @@ def load_recommendation_data():
         return None
 
 # Fungsi untuk mengkonversi gambar ke Base64 untuk disisipkan di HTML
-def get_image_as_base64_html(image_path, height_em=1.2, margin_right_em=0.2):
+def get_image_as_base64_html(image_path, height_em=1.0, margin_right_em=0.3):
     if not os.path.exists(image_path):
         return f"<span style='color:red;'>Logo not found: {os.path.basename(image_path)}</span>"
     try:
@@ -131,8 +135,19 @@ def get_image_as_base64_html(image_path, height_em=1.2, margin_right_em=0.2):
 
 
 # Muat semua aset aplikasi dan data rekomendasi
-model, class_names = load_app_assets() # Panggil fungsi yang sudah dimodifikasi
+# Perhatikan bahwa 'model' sekarang akan menjadi None
+class_names = load_app_assets() 
 df_pengobatan = load_recommendation_data()
+
+# Definisikan DUMMY_CLASS_NAMES di sini agar global untuk simulasi deteksi
+# Pastikan ini sesuai dengan daftar kelas yang ada di labels.txt Anda
+# Contoh: jika labels.txt berisi blackhead, pustules, whitehead, papules, cystic, lv0 (6 kelas)
+# Atau 5 kelas seperti di labels.txt yang Anda berikan sebelumnya: blackhead, pustules, whitehead, papules, cystic
+DUMMY_CLASS_NAMES = ["blackhead", "pustule", "whitehead", "papule", "cystic", "lv0"] # Contoh 6 kelas
+# Pastikan DUMMY_CLASS_NAMES cocok dengan class_names yang dimuat dari labels.txt
+# Jika labels.txt Anda hanya 5 kelas, sesuaikan DUMMY_CLASS_NAMES.
+# Misalnya: DUMMY_CLASS_NAMES = ["blackhead", "pustule", "whitehead", "papule", "cystic"]
+
 
 # Mapping untuk tipe kulit dari Streamlit ke nilai di kolom 'jenis kulit' CSV
 SKIN_TYPE_MAP_TO_CSV = {
@@ -452,7 +467,7 @@ with st.sidebar:
 header_container = st.container()
 with header_container:
     # Menggunakan fungsi untuk menyisipkan logo sebagai HTML string di dalam H1
-    logo_path_header = "acenesence_logo.png" # Path ke logo icon Anda (Pastikan ini ada!)
+    logo_path_header = "lawan_jerawat_logo.png" # Pastikan ini adalah path ke file logo ikon Anda
     
     # Kontrol ukuran dan margin logo di dalam teks
     logo_html_string = get_image_as_base64_html(logo_path_header, height_em=1.0, margin_right_em=0.3) 
@@ -478,7 +493,7 @@ if method == "Gunakan Kamera":
         st.warning("Please capture an image to start detection.")
 elif method == "Unggah Gambar dari Perangkat":
     st.info("⬆️ **Tips:** Unggah gambar jelas berformat JPG, JPEG, atau PNG.")
-    uploaded_file = st.file_uploader("Pilih gambar jerawat Anda", type=["jpg", "jpeg", "png"], key="image_uploader")
+    uploaded_file = st.file_uploader("Pilih gambar jerawat Anda", type=["jpg", "jpeg", "png"), key="image_uploader")
     if uploaded_file is not None:
         img_data = uploaded_file.read()
         st.image(img_data, caption="Uploaded image.", use_column_width=True)
@@ -500,14 +515,14 @@ st.markdown("---")
 
 col_button_detect, col_button_clear = st.columns(2)
 
-# Definisikan dummy class_names (ini akan digunakan untuk simulasi)
+# Definisikan DUMMY_CLASS_NAMES (ini akan digunakan untuk simulasi)
 # Pastikan ini sesuai dengan daftar kelas yang ada di labels.txt Anda
-# Contoh: jika labels.txt berisi 5 jenis jerawat + lv0 (No Acne)
-DUMMY_CLASS_NAMES = ["lv0", "blackhead", "whitehead", "papule", "pustule", "cystic"] 
+# Jika labels.txt Anda hanya 5 kelas, hapus "lv0" dari list ini.
+DUMMY_CLASS_NAMES = ["blackhead", "pustule", "whitehead", "papule", "cystic", "lv0"] 
 
 with col_button_detect:
     if st.button("Start Acne Detection", key="detect_button", use_container_width=True):
-        # Periksa hanya class_names dan df_pengobatan, karena model sekarang selalu None
+        # class_names sekarang sudah dimuat dari labels.txt oleh load_app_assets()
         if class_names is None or df_pengobatan is None:
             st.error("❌ Aplikasi belum siap: Daftar jenis jerawat atau data rekomendasi gagal dimuat.")
         elif img_data is None:
@@ -523,7 +538,6 @@ with col_button_detect:
                     acne_confidence_simulated = random.uniform(0.6, 0.99) 
                     
                     # Buat array prediksi dummy untuk plotting bar chart
-                    # Distribusikan probabilitas ke semua kelas
                     num_classes_simulated = len(DUMMY_CLASS_NAMES)
                     simulated_prediction_array = np.random.dirichlet(np.ones(num_classes_simulated)) # Distribusi probabilitas ke semua kelas
                     # Set probabilitas kelas yang dipilih secara acak menjadi confidence yang disimulasikan
@@ -605,7 +619,7 @@ if 'acne_prediction_results' in st.session_state and st.session_state['acne_pred
     
     # Gunakan DUMMY_CLASS_NAMES untuk label plot
     classes_display = [c.replace('lv0', 'No Acne').upper() for c in DUMMY_CLASS_NAMES]
-    confidences = acne_prediction_for_plot[0] # Menggunakan array prediksi yang disimulasikan
+    confidences = acne_prediction_for_plot[0] 
     
     sorted_indices = np.argsort(confidences)[::-1]
     sorted_classes = [classes_display[i] for i in sorted_indices]
