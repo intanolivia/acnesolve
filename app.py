@@ -1,10 +1,16 @@
 import streamlit as st
+# Hapus semua import TensorFlow/Keras
+# import tensorflow as tf
+# from tensorflow.keras import layers, Model
+# from tensorflow.keras.metrics import Precision, Recall
+
 from PIL import Image, ImageOps
 import numpy as np
 import pandas as pd
 import io
 import os
 import random
+import matplotlib.pyplot as plt # Diperlukan untuk plot bar chart
 import json
 from datetime import datetime
 import base64 # Diperlukan untuk menyisipkan gambar sebagai Base64
@@ -18,6 +24,7 @@ st.set_page_config(
 )
 
 np.set_printoptions(suppress=True)
+# tf.get_logger().setLevel('ERROR') # Hapus ini karena tidak ada TensorFlow
 
 # --- Jurnal Progres Kulit: Konfigurasi dan Fungsi ---
 JOURNAL_DIR = "progress_journal_data"
@@ -60,8 +67,8 @@ def add_journal_entry(image_bytes, note):
 journal_entries = load_journal_entries()
 
 # --- Fungsi untuk Memuat Data Aplikasi (Tanpa Model ML) ---
-@st.cache_resource 
-def load_app_assets(): 
+@st.cache_resource # Tetap gunakan cache untuk efisiensi
+def load_app_assets(): # Nama fungsi diubah
     """Loads label file and provides dummy class_names."""
     labels_path = "labels.txt" # Lokasi file labels Anda
 
@@ -78,6 +85,7 @@ def load_app_assets():
             st.error("❌ `labels.txt` is empty or does not contain class names. Please check the file.")
             return None
         
+        # Mengembalikan DUMMY_MODEL_PLACEHOLDER sebagai pengganti objek model
         return class_names 
     except Exception as e:
         st.error(f"❌ Failed to load application assets: {e}")
@@ -127,14 +135,18 @@ def get_image_as_base64_html(image_path, height_em=1.0, margin_right_em=0.3):
 
 
 # Muat semua aset aplikasi dan data rekomendasi
-# 'model' sekarang akan menjadi None
+# Perhatikan bahwa 'model' sekarang akan menjadi None
 class_names = load_app_assets() 
 df_pengobatan = load_recommendation_data()
 
-# Definisikan DUMMY_CLASS_NAMES (ini akan digunakan untuk simulasi)
-# PASTIKAN ini cocok dengan kelas-kelas di labels.txt Anda
-# Contoh labels.txt: blackhead, pustule, whitehead, papule, cystic, lv0 (total 6 kelas)
-DUMMY_CLASS_NAMES = ["blackhead", "pustule", "whitehead", "papule", "cystic", "lv0"] 
+# Definisikan DUMMY_CLASS_NAMES di sini agar global untuk simulasi deteksi
+# Pastikan ini sesuai dengan daftar kelas yang ada di labels.txt Anda
+# Contoh: jika labels.txt berisi blackhead, pustules, whitehead, papules, cystic, lv0 (6 kelas)
+# Atau 5 kelas seperti di labels.txt yang Anda berikan sebelumnya: blackhead, pustules, whitehead, papules, cystic
+DUMMY_CLASS_NAMES = ["blackhead", "pustule", "whitehead", "papule", "cystic", "lv0"] # Contoh 6 kelas
+# Pastikan DUMMY_CLASS_NAMES cocok dengan class_names yang dimuat dari labels.txt
+# Jika labels.txt Anda hanya 5 kelas, sesuaikan DUMMY_CLASS_NAMES.
+# Misalnya: DUMMY_CLASS_NAMES = ["blackhead", "pustule", "whitehead", "papule", "cystic"]
 
 
 # Mapping untuk tipe kulit dari Streamlit ke nilai di kolom 'jenis kulit' CSV
@@ -481,7 +493,7 @@ if method == "Gunakan Kamera":
         st.warning("Please capture an image to start detection.")
 elif method == "Unggah Gambar dari Perangkat":
     st.info("⬆️ **Tips:** Unggah gambar jelas berformat JPG, JPEG, atau PNG.")
-    uploaded_file = st.file_uploader("Pilih gambar jerawat Anda", type=["jpg", "jpeg", "png"], key="image_uploader")
+    uploaded_file = st.file_uploader("Pilih gambar jerawat Anda", type=["jpg", "jpeg", "png"), key="image_uploader")
     if uploaded_file is not None:
         img_data = uploaded_file.read()
         st.image(img_data, caption="Uploaded image.", use_column_width=True)
@@ -505,14 +517,12 @@ col_button_detect, col_button_clear = st.columns(2)
 
 # Definisikan DUMMY_CLASS_NAMES (ini akan digunakan untuk simulasi)
 # Pastikan ini sesuai dengan daftar kelas yang ada di labels.txt Anda
-# Contoh: jika labels.txt berisi blackhead, pustules, whitehead, papules, cystic, lv0 (6 kelas)
 # Jika labels.txt Anda hanya 5 kelas, hapus "lv0" dari list ini.
 DUMMY_CLASS_NAMES = ["blackhead", "pustule", "whitehead", "papule", "cystic", "lv0"] 
 
 with col_button_detect:
     if st.button("Start Acne Detection", key="detect_button", use_container_width=True):
         # class_names sekarang sudah dimuat dari labels.txt oleh load_app_assets()
-        # 'model' tidak ada lagi, jadi hilangkan pengecekannya
         if class_names is None or df_pengobatan is None:
             st.error("❌ Aplikasi belum siap: Daftar jenis jerawat atau data rekomendasi gagal dimuat.")
         elif img_data is None:
@@ -521,26 +531,32 @@ with col_button_detect:
             with st.spinner("⏳ Menganalisis gambar Anda. Mohon tunggu..."):
                 try:
                     # Ini adalah logika prediksi dummy/simulasi tanpa model ML
+                    # Pilih kelas secara acak dari DUMMY_CLASS_NAMES
                     acne_class_raw_simulated = random.choice(DUMMY_CLASS_NAMES)
+                    
+                    # Berikan skor kepercayaan acak yang realistis
                     acne_confidence_simulated = random.uniform(0.6, 0.99) 
                     
                     # Buat array prediksi dummy untuk plotting bar chart
                     num_classes_simulated = len(DUMMY_CLASS_NAMES)
-                    simulated_prediction_array = np.random.dirichlet(np.ones(num_classes_simulated)) 
+                    simulated_prediction_array = np.random.dirichlet(np.ones(num_classes_simulated)) # Distribusi probabilitas ke semua kelas
+                    # Set probabilitas kelas yang dipilih secara acak menjadi confidence yang disimulasikan
                     simulated_prediction_array[DUMMY_CLASS_NAMES.index(acne_class_raw_simulated)] = acne_confidence_simulated
+                    # Normalisasi ulang jika diperlukan agar totalnya 1 (dirichlet sudah menjaminnya)
                     simulated_prediction_array /= simulated_prediction_array.sum()
                     
+                    # Bungkus dalam format yang diharapkan oleh bagian hasil
                     acne_prediction_for_display = np.array([simulated_prediction_array])
 
 
                     st.session_state['acne_prediction_results'] = {
-                        'prediction': acne_prediction_for_display, 
-                        'img_data': img_data, 
+                        'prediction': acne_prediction_for_display, # Gunakan array prediksi yang disimulasikan untuk plot
+                        'img_data': img_data, # Simpan data gambar asli
                         'skin_type': skin_type,
-                        'simulated_class_raw': acne_class_raw_simulated,
-                        'simulated_confidence': acne_confidence_simulated
+                        'simulated_class_raw': acne_class_raw_simulated, # Simpan hasil kelas simulasi
+                        'simulated_confidence': acne_confidence_simulated # Simpan confidence simulasi
                     }
-                    st.rerun() # Menggunakan st.rerun() yang baru
+                    st.experimental_rerun()
                     
                 except Exception as e:
                     st.error(f"❌ An error occurred during image processing or simulation: {e}")
@@ -550,16 +566,17 @@ with col_button_clear:
     if st.button("Restart / Clear", key="clear_button", use_container_width=True):
         if 'acne_prediction_results' in st.session_state:
             del st.session_state['acne_prediction_results']
-        st.rerun() # Menggunakan st.rerun() yang baru
+        st.experimental_rerun()
 
 if 'acne_prediction_results' in st.session_state and st.session_state['acne_prediction_results'] is not None:
     st.markdown("<h2 class='subheader'>✨ Your Skin Analysis Results</h2>", unsafe_allow_html=True)
     
     results = st.session_state['acne_prediction_results']
-    acne_prediction_for_plot = results['prediction']
+    acne_prediction_for_plot = results['prediction'] # Array untuk plot
     skin_type = results['skin_type']
     original_img_data = results['img_data']
     
+    # Ambil hasil simulasi langsung
     acne_class_raw = results['simulated_class_raw']
     acne_confidence = results['simulated_confidence']
 
@@ -761,7 +778,7 @@ if st.button("Save Progress", key="save_journal_button"):
             journal_entries.append(new_entry)
             save_journal_entries(journal_entries)
             st.success("✅ Progress saved successfully!")
-            st.rerun() # Menggunakan st.rerun()
+            st.experimental_rerun()
         except Exception as e:
             st.error(f"❌ Failed to save progress: {e}")
     else:
@@ -779,7 +796,7 @@ if 'acne_prediction_results' in st.session_state and st.session_state['acne_pred
             success, message = add_journal_entry(original_img_data_for_journal, journal_note_from_detection)
             if success:
                 st.success(f"✅ {message}")
-                st.rerun() # Menggunakan st.rerun()
+                st.experimental_rerun() # Refresh halaman untuk menampilkan entri baru
             else:
                 st.error(f"❌ {message}")
         else:
@@ -814,7 +831,7 @@ if journal_entries:
                 os.remove(full_image_path)
                 st.info(f"Image '{entry['image_path']}' deleted successfully.")
             st.success("Progress entry deleted successfully.")
-            st.rerun() # Menggunakan st.rerun()
+            st.experimental_rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 else:
     st.info("No skin progress entries yet. Start adding your progress!")
