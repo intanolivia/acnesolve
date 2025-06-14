@@ -1,0 +1,18 @@
+tingkat,jenis kulit,kandungan,rekomendasi
+lv0, pelembab,N/A,Pertahankan rutinitas skincare dasar yang lembut: pembersih
+blackheads,Oily,Salicylic Acid (BHA),Pembersih wajah/toner dengan Salicylic Acid 1-2%
+blackheads,Oily,Retinoid (OTC/Resep),Serum Retinoid (Adapalene) atau Tretinoin (Resep Dokter)
+blackheads,Semua (Kecuali Sangat Sensitif),Glycolic Acid (AHA),Toner/serum Glycolic Acid untuk eksfoliasi kulit
+whiteheads,Oily,Benzoyl Peroxide,Spot treatment atau wash Benzoyl Peroxide 2.5-5%
+whiteheads,Oily,Salicylic Acid (BHA),Eksfoliasi kimia dengan Salicylic Acid untuk membersihkan pori
+whiteheads,Semua,Azelaic Acid,Krim atau serum Azelaic Acid untuk mengurangi peradangan dan komedo
+papules,Semua,Niacinamide,Serum Niacinamide 5-10% untuk mengurangi peradangan dan kemerahan
+papules,Oily,Benzoyl Peroxide,Spot treatment Benzoyl Peroxide konsentrasi rendah (2.5%)
+papules,Semua,Azelaic Acid,Krim Azelaic Acid untuk sifat anti-inflamasi dan antibakteri
+pustules,Oily,Benzoyl Peroxide,Gel atau krim Benzoyl Peroxide 5-10% untuk membunuh bakteri
+pustules,Semua,Clindamycin (Resep Dokter),Krim antibiotik topikal (hanya dengan resep dokter)
+pustules,Oily,Tea Tree Oil,Spot treatment dengan Tea Tree Oil (encerkan jika murni)
+cystic,Semua,Isotretinoin (Resep Dokter),Obat oral Isotretinoin (konsultasi dengan dermatologis)
+cystic,Semua,Injeksi Kortikosteroid (Prosedur Medis),Suntikan langsung ke kista untuk mengurangi peradangan
+cystic,Semua,Drainase dan Ekstraksi (Prosedur Medis),Dilakukan oleh profesional medis
+cystic,Semua,Antibiotik Oral (Resep Dokter),Doksisiklin atau Minosiklin untuk peradangan parah
