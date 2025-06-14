@@ -1,7 +1,8 @@
 import streamlit as st
-import tensorflow as tf
-from tensorflow.keras import layers, Model
-from tensorflow.keras.metrics import Precision, Recall
+# Hapus semua import TensorFlow/Keras
+# import tensorflow as tf
+# from tensorflow.keras import layers, Model
+# from tensorflow.keras.metrics import Precision, Recall
 
 from PIL import Image, ImageOps
 import numpy as np
@@ -9,9 +10,10 @@ import pandas as pd
 import io
 import os
 import random
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # Tetap diperlukan untuk plot bar chart
 import json
 from datetime import datetime
+import base64 # Import library base64
 
 # --- Streamlit Page Configuration ---
 st.set_page_config(
@@ -22,7 +24,8 @@ st.set_page_config(
 )
 
 np.set_printoptions(suppress=True)
-tf.get_logger().setLevel('ERROR')
+# Hapus konfigurasi logger TensorFlow
+# tf.get_logger().setLevel('ERROR')
 
 JOURNAL_DIR = "progress_journal_data"
 JOURNAL_METADATA_FILE = os.path.join(JOURNAL_DIR, "journal_metadata.json")
@@ -63,82 +66,34 @@ def add_journal_entry(image_bytes, note):
 
 journal_entries = load_journal_entries()
 
-# --- Fungsi untuk Membuat Arsitektur Model EfficientNet (SAMA PERSIS DENGAN SAAT PELATIHAN, TANPA DATA AUGMENTATION) ---
-def create_efficientnet_model_architecture(num_classes=5):
-    efficientnet_model = tf.keras.applications.EfficientNetB0(
-        include_top=False,
-        weights='imagenet',
-        input_shape=(150, 150, 3)
-    )
-
-    for layer in efficientnet_model.layers[:-50]:
-        layer.trainable = True
-
-    input_layer = layers.Input(shape=(150, 150, 3))
-    x = efficientnet_model(input_layer, training=False)
-    
-    x = layers.GlobalAveragePooling2D()(x)
-    x = layers.Dense(1024, activation='relu')(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.Dropout(0.6)(x)
-    x = layers.Dense(512, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.005))(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.Dropout(0.5)(x)
-    output_layer = layers.Dense(num_classes, activation='softmax', kernel_regularizer=tf.keras.regularizers.l2(0.005))(x)
-
-    model = Model(inputs=input_layer, outputs=output_layer)
-    return model
-
-# --- Fungsi untuk Memuat Model dan Data Rekomendasi ---
-@st.cache_resource
-def load_ml_assets():
-    """Loads the Keras model (architecture + weights) and label file manually."""
-    weights_only_path = r"D:\DOKUMEN MATKUL\SEMESTER 6\MACHINE LEARNING\jerawat\acne_predict_weight.h5" 
+# --- Fungsi untuk Memuat Data Rekomendasi dan Kelas (Tanpa Model ML) ---
+@st.cache_resource # Tetap gunakan cache untuk efisiensi
+def load_assets_without_ml_model():
+    """Loads label file and sets up dummy model/class_names."""
     labels_path = "labels.txt"
 
-    if not os.path.exists(weights_only_path):
-        st.error(f"❌ ERROR: Model weights file '{weights_only_path}' NOT FOUND.")
-        st.info(f"Ensure '{weights_only_path}' is in the correct directory and is a WEIGHTS-ONLY .h5 file.")
-        return None, None
-    
     if not os.path.exists(labels_path):
         st.error(f"❌ ERROR: Labels file '{labels_path}' NOT FOUND.")
-        st.info(f"Ensure '{labels_path}' is in the same directory as the app.")
-        return None, None
+        st.info(f"Pastikan '{labels_path}' ada di direktori yang sama dengan aplikasi.")
+        return None, None # Mengembalikan None untuk 'model'
 
     try:
-        # Menghapus pesan loading di sidebar untuk tampilan yang lebih bersih
-        # st.sidebar.info(f"Building model architecture and loading weights...")
+        # Tidak ada loading model ML di sini
+        # st.sidebar.info("Initializing application assets...") # Pesan ini juga dihapus untuk tampilan bersih
         
-        NUM_CLASSES = 5 
-        model = create_efficientnet_model_architecture(num_classes=NUM_CLASSES)
-        model.load_weights(weights_only_path)
-        
-        # st.sidebar.success("✅ Model and weights loaded successfully!")
-
-        # st.sidebar.info(f"Loading acne type list...")
         with open(labels_path, "r") as f:
             class_names = [line.strip() for line in f.readlines()]
-        # st.sidebar.success("✅ Acne type list loaded successfully!")
 
         if not class_names:
             st.error("❌ `labels.txt` is empty or does not contain class names. Please check the file.")
             return None, None
         
-        # st.sidebar.write(f"Loaded classes: {class_names}") # Debugging message, dihapus
-        # st.sidebar.write(f"TensorFlow Version: {tf.__version__}") # Debugging message, dihapus
-
-        return model, class_names
+        # st.sidebar.success("✅ Application assets loaded successfully!") # Pesan ini juga dihapus
+        
+        return None, class_names # Mengembalikan None untuk 'model'
     except Exception as e:
-        st.error(f"❌ Failed to build/load model or weights: {e}")
-        st.warning("Common causes: Mismatch in model architecture definition, corrupted weights file, or TensorFlow version issues. **Please check the console for full error traceback.**")
-        st.info("""
-        **Troubleshooting steps:**
-        1.  **Architecture Mismatch (Most Common with this approach):** The `create_efficientnet_model_architecture` function MUST exactly match your trained model. Check every layer, filter, unit, input_shape, activations.
-        2.  **Weights File Integrity:** Ensure `acne_predict_weight.h5` exists, is not corrupted, and truly contains *only weights*.
-        3.  **TensorFlow Version Consistency:** Verify exact TF version consistency between training and Streamlit environments (`pip show tensorflow`).
-        4.  **Dependencies:** Ensure `h5py` and `protobuf` versions are compatible with your TensorFlow.
-        """)
+        st.error(f"❌ Failed to load application assets: {e}")
+        st.warning("Penyebab umum: file `labels.txt` rusak atau tidak ada.")
         return None, None
 
 @st.cache_data
@@ -152,10 +107,7 @@ def load_recommendation_data():
         return None
 
     try:
-        # Menghapus pesan loading di sidebar untuk tampilan yang lebih bersih
-        # st.sidebar.info(f"Loading recommendation data...")
         df = pd.read_csv(csv_path)
-        # st.sidebar.success("✅ Recommendation data loaded successfully!")
         
         required_cols = ['tingkat', 'jenis kulit', 'kandungan', 'rekomendasi']
         for col in required_cols:
@@ -172,68 +124,61 @@ def load_recommendation_data():
         st.info("Ensure the file is in the same directory and the format is correct (columns: 'tingkat', 'jenis kulit', 'kandungan', 'rekomendasi').")
         return None
 
-# Load all ML assets and data at app startup
-model, class_names = load_ml_assets()
+# Fungsi untuk mengkonversi gambar ke Base64 untuk disisipkan di HTML
+def get_image_as_base64_html(image_path, height_em=1.2, margin_right_em=0.2):
+    if not os.path.exists(image_path):
+        return f"<span style='color:red;'>Logo not found: {os.path.basename(image_path)}</span>"
+    try:
+        with open(image_path, "rb") as f:
+            img_bytes = f.read()
+        encoded = base64.b64encode(img_bytes).decode("utf-8")
+        mime_type = "image/png" if image_path.lower().endswith(".png") else "image/jpeg"
+        return f'<img src="data:{mime_type};base64,{encoded}" style="height: {height_em}em; vertical-align: middle; margin-right: {margin_right_em}em;">'
+    except Exception as e:
+        return f"<span style='color:red;'>Error loading logo: {e}</span>"
+
+
+# Muat semua aset (tanpa ML Model) dan data di awal aplikasi
+model, class_names = load_assets_without_ml_model() # Mengganti load_ml_assets
 df_pengobatan = load_recommendation_data()
 
-# Mapping for skin type from Streamlit to 'jenis kulit' column in CSV
+# Mapping untuk tipe kulit dari Streamlit ke nilai di kolom 'jenis kulit' CSV
 SKIN_TYPE_MAP_TO_CSV = {
-    "Normal": "semua",
-    "Berminyak": "oily",
-    "Kering": "semua",
-    "Kombinasi": "semua",
-    "Sensitive": "semua", 
-    "Tidak Tahu / Lewati": "semua" 
+    "Normal": "semua", "Berminyak": "oily", "Kering": "semua", "Kombinasi": "semua", "Sensitive": "semua", "Tidak Tahu / Lewati": "semua"
 }
 
-# --- Interactive Features: "Did You Know?" ---
 DID_YOU_KNOW_FACTS = [
-    "Tahukah Anda? Mencuci muka dua kali sehari sudah cukup. Terlalu sering bisa mengiritasi kulit!",
-    "Tahukah Anda? Stres dapat memicu jerawat. Kelola stres dengan baik untuk kulit yang lebih sehat.",
-    "Tahukah Anda? Sarung bantal kotor bisa jadi sarang bakteri penyebab jerawat. Ganti secara rutin!",
-    "Tahukah Anda? SPF itu wajib, bahkan untuk kulit berjerawat! Pilih yang non-comedogenic.",
-    "Tahukah Anda? Jangan memencet jerawat! Ini bisa memperparah peradangan dan meninggalkan bekas luka.",
-    "Tahukah Anda? Asupan gula berlebih bisa memperburuk jerawat. Kurangi makanan manis untuk kulit lebih baik.",
-    "Tahukah Anda? Produk non-comedogenic berarti tidak akan menyumbat pori-pori.",
-    "Tahukah Anda? Antibiotik oral untuk jerawat harus digunakan di bawah pengawasan dokter."
+    "Tahukah Anda? Mencuci muka dua kali sehari sudah cukup. Terlalu sering bisa mengiritasi kulit!", "Tahukah Anda? Stres dapat memicu jerawat. Kelola stres dengan baik untuk kulit yang lebih sehat!", "Tahukah Anda? Sarung bantal kotor bisa jadi sarang bakteri penyebab jerawat. Ganti secara rutin!", "Tahukah Anda? SPF itu wajib, bahkan untuk kulit berjerawat! Pilih yang non-comedogenic.", "Tahukah Anda? Jangan memencet jerawat! Ini bisa memperparah peradangan dan meninggalkan bekas luka.", "Tahukah Anda? Asupan gula berlebih bisa memperburuk jerawat. Kurangi makanan manis untuk kulit lebih baik.", "Tahukah Anda? Produk non-comedogenic berarti tidak akan menyumbat pori-pori.", "Tahukah Anda? Antibiotik oral untuk jerawat harus digunakan di bawah pengawasan dokter."
 ]
 
-# --- Interactive Features: Myth vs. Fact ---
 MYTH_FACT_PAIRS = [
-    {"myth": "Mitos: Pasta gigi bisa mengeringkan jerawat.",
-     "fact": "Fakta: Pasta gigi dapat mengiritasi dan memperburuk jerawat karena mengandung bahan-bahan seperti alkohol dan mentol yang tidak dirancang untuk kulit."},
-    {"myth": "Mitos: Matahari bisa menyembuhkan jerawat.",
-     "fact": "Fakta: Paparan sinar matahari berlebihan justru bisa merusak kulit, memicu produksi minyak berlebih, dan membuat bekas jerawat lebih gelap (hiperpigmentasi pasca-inflamasi)."},
-    {"myth": "Mitos: Jerawat hanya dialami remaja.",
-     "fact": "Fakta: Jerawat bisa muncul pada usia berapa pun, dari bayi hingga dewasa. Jerawat dewasa sering disebut 'adult acne'."},
-    {"myth": "Mitos: Memencet jerawat akan mempercepat penyembuhan.",
-     "fact": "Fakta: Memencet jerawat dapat mendorong bakteri lebih dalam ke kulit, menyebabkan infeksi, peradangan lebih parah, dan meninggalkan bekas luka atau flek hitam."},
-    {"myth": "Mitos: Kulit kering tidak bisa berjerawat.",
-     "fact": "Fakta: Kulit kering juga bisa berjerawat, terutama jika pori-pori tersumbat atau ada ketidakseimbangan mikrobioma kulit. Jerawat bisa terjadi pada semua jenis kulit."},
+    {"myth": "Mitos: Pasta gigi bisa mengeringkan jerawat.", "fact": "Fakta: Pasta gigi dapat mengiritasi dan memperburuk jerawat karena mengandung bahan-bahan seperti alkohol dan mentol yang tidak dirancang untuk kulit."},
+    {"myth": "Mitos: Matahari bisa menyembuhkan jerawat.", "fact": "Fakta: Paparan sinar matahari berlebihan justru bisa merusak kulit, memicu produksi minyak berlebih, dan membuat bekas jerawat lebih gelap (hiperpigmentasi pasca-inflamasi)."},
+    {"myth": "Mitos: Jerawat hanya dialami remaja.", "fact": "Fakta: Jerawat bisa muncul pada usia berapa pun, dari bayi hingga dewasa. Jerawat dewasa sering disebut 'adult acne'."},
+    {"myth": "Mitos: Memencet jerawat akan mempercepat penyembuhan.", "fact": "Fakta: Memencet jerawat dapat mendorong bakteri lebih dalam ke kulit, menyebabkan infeksi, peradangan lebih parah, dan meninggalkan bekas luka atau flek hitam."},
+    {"myth": "Mitos: Kulit kering tidak bisa berjerawat.", "fact": "Fakta: Kulit kering juga bisa berjerawat, terutama jika pori-pori tersumbat atau ada ketidakseimbangan mikrobioma kulit. Jerawat bisa terjadi pada semua jenis kulit."},
 ]
 
-
-# --- CUSTOM CSS INJECTION (Macaroon Style) ---
 st.markdown("""
 <style>
     /* Macaroon Color Palette */
     :root {
-        --macaroon-light-bg: #F7F3F3; /* Almost white */
-        --macaroon-sidebar-bg: #E6DCDC; /* Light Grayish Pink */
-        --macaroon-main-header: #6B4E56; /* Plum/Dark Muted Pink */
-        --macaroon-subheader: #9B7B8B; /* Muted Rose */
-        --macaroon-text: #4A4A4A; /* Soft Dark Gray */
-        --macaroon-accent-pink: #D8A7B1; /* Rose Pink */
-        --macaroon-accent-teal: #A8DADC; /* Soft Teal */
-        --macaroon-success-light: #F0F4C3; /* Light Lime */
-        --macaroon-success-dark: #A2C49C; /* Soft Green */
-        --macaroon-info-light: #D5E8F3; /* Light Sky Blue */
-        --macaroon-info-dark: #81B3D5; /* Muted Blue */
-        --macaroon-warning-light: #FDEBD0; /* Creamy Yellow */
-        --macaroon-warning-dark: #E6B0AA; /* Muted Orange */
-        --macaroon-error-light: #FADBD8; /* Light Coral */
-        --macaroon-error-dark: #EB9991; /* Darker Coral */
-        --macaroon-border: #E0E0E0; /* Light Gray Border */
+        --macaroon-light-bg: #F7F3F3;
+        --macaroon-sidebar-bg: #E6DCDC;
+        --macaroon-main-header: #6B4E56;
+        --macaroon-subheader: #9B7B8B;
+        --macaroon-text: #4A4A4A;
+        --macaroon-accent-pink: #D8A7B1;
+        --macaroon-accent-teal: #A8DADC;
+        --macaroon-success-light: #F0F4C3;
+        --macaroon-success-dark: #A2C49C;
+        --macaroon-info-light: #D5E8F3;
+        --macaroon-info-dark: #81B3D5;
+        --macaroon-warning-light: #FDEBD0;
+        --macaroon-warning-dark: #E6B0AA;
+        --macaroon-error-light: #FADBD8;
+        --macaroon-error-dark: #EB9991;
+        --macaroon-border: #E0E0E0;
     }
 
     /* General Font and Background */
@@ -282,7 +227,7 @@ st.markdown("""
 
     /* Buttons */
     .stButton>button {
-        background-color: var(--macaroon-accent-pink); /* Rose Pink */
+        background-color: var(--macaroon-accent-pink);
         color: white;
         font-family: 'Poppins', sans-serif;
         font-size: 1.2rem;
@@ -295,7 +240,7 @@ st.markdown("""
         font-weight: 600;
     }
     .stButton>button:hover {
-        background-color: #C28E99; /* Darker pink on hover */
+        background-color: #C28E99;
         transform: translateY(-5px);
         box-shadow: 0 8px 16px rgba(0,0,0,0.3);
     }
@@ -325,9 +270,9 @@ st.markdown("""
         transition: all 0.2s ease;
     }
     .stFileUploader>div>div>button:hover {
-        background-color: #F0EDED; /* Slightly darker light bg */
+        background-color: #F0EDED;
         transform: none;
-        box_shadow: none;
+        box-shadow: none;
     }
 
     /* Alerts (Info, Success, Warning) */
@@ -345,23 +290,23 @@ st.markdown("""
 
     /* Custom Boxes for Results */
     .acne-result-box {
-        background-color: #f7e6f0; /* Light pink for result box */
+        background-color: #f7e6f0;
         padding: 20px;
         border-radius: 10px;
-        border-left: 6px solid #D8A7B1; /* Rose Pink border */
+        border-left: 6px solid #D8A7B1;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         margin-bottom: 1.5rem;
     }
     .acne-recommendation-box {
-        background-color: #e6f0f5; /* Light blueish for recommendation */
+        background-color: #e6f0f5;
         padding: 20px;
         border-radius: 10px;
-        border-left: 6px solid #A8DADC; /* Soft Teal border */
+        border-left: 6px solid #A8DADC;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         margin-top: 1.5rem;
     }
     .journal-entry-box {
-        background-color: #fff9e6; /* Creamy yellow for journal entries */
+        background-color: #fff9e6;
         border: 1px solid #ffecb3;
         border-radius: 8px;
         padding: 15px;
@@ -376,7 +321,7 @@ st.markdown("""
 
     /* Sidebar Customization */
     [data-testid="stSidebar"] {
-        background-color: var(--macaroon-sidebar-bg); /* Light Grayish Pink */
+        background-color: var(--macaroon-sidebar-bg);
         padding: 1.5rem;
         box-shadow: 2px 0 10px rgba(0,0,0,0.05);
     }
@@ -391,12 +336,12 @@ st.markdown("""
         color: var(--macaroon-text);
     }
     [data-testid="stSidebarContent"] .stSpinnerContainer {
-        color: var(--macaroon-accent-pink); /* Spinner color */
+        color: var(--macaroon-accent-pink);
     }
 
     /* Expander styling */
     .streamlit-expanderHeader {
-        background-color: #F0D5E6; /* Lighter pink for expander header */
+        background-color: #F0D5E6;
         color: var(--macaroon-main-header);
         font-weight: 600;
         border-radius: 8px;
@@ -522,18 +467,16 @@ with st.sidebar:
 
 header_container = st.container()
 with header_container:
-    col_logo, col_title = st.columns([0.1, 6])
-    with col_logo:
-        logo_path = "acenesence_logo.png"
-        if os.path.exists(logo_path):
-            logo = Image.open(logo_path)
-            st.image(logo, width=800)
-        else:
-            st.warning(f"Logo '{logo_path}' not found.")
-        
-    #with col_title:
-     #   st.markdown("<h1 class='main-header'>AcneSolve 🌸</h1>", unsafe_allow_html=True)
-      #  st.write("""Detect your acne type and get personalized treatment recommendations for healthy skin!""")
+    # Menggunakan fungsi untuk menyisipkan logo sebagai HTML string di dalam H1
+    logo_path_header = "acenesence_logo.png" # Path ke logo icon Anda
+    
+    # Kontrol ukuran dan margin logo di dalam teks
+    # Adjust height_em to fit well with your 'AcneSolve' text
+    logo_html_string = get_image_as_base64_html(logo_path_header, height_em=1.0, margin_right_em=0.3) 
+    
+    # Pastikan Anda punya logo di tengah teks "AcneSolve"
+    st.markdown(f"<h1 class='main-header'>Acne{logo_html_string}Solve 🌸</h1>", unsafe_allow_html=True)
+    st.write("""Detect your acne type and get personalized treatment recommendations for healthy skin!""")
     st.markdown("---")
 
 st.markdown("<h2 class='subheader'>📸 Take or Upload Your Acne Image</h2>", unsafe_allow_html=True)
@@ -553,7 +496,7 @@ if method == "Gunakan Kamera":
         st.warning("Please capture an image to start detection.")
 elif method == "Unggah Gambar dari Perangkat":
     st.info("⬆️ **Tips:** Unggah gambar jelas berformat JPG, JPEG, atau PNG.")
-    uploaded_file = st.file_uploader("Select your acne image", type=["jpg", "jpeg", "png"], key="image_uploader")
+    uploaded_file = st.file_uploader("Pilih gambar jerawat Anda", type=["jpg", "jpeg", "png"], key="image_uploader")
     if uploaded_file is not None:
         img_data = uploaded_file.read()
         st.image(img_data, caption="Uploaded image.", use_column_width=True)
@@ -575,37 +518,60 @@ st.markdown("---")
 
 col_button_detect, col_button_clear = st.columns(2)
 
+# Definisikan dummy class_names jika load_ml_assets mengembalikan None
+DUMMY_CLASS_NAMES = ["lv0", "blackhead", "whitehead", "papule", "pustule", "cystic"]
+# Pastikan jumlah kelas ini sesuai dengan yang diharapkan oleh logic Anda
+# Ini contoh jika ada 6 kelas termasuk 'lv0' (No Acne)
+
 with col_button_detect:
     if st.button("Start Acne Detection", key="detect_button", use_container_width=True):
-        if model is None or class_names is None or df_pengobatan is None:
-            st.error("❌ App not ready: Model or recommendation data failed to load. Check sidebar for errors.")
+        # Model sekarang akan selalu None, jadi sesuaikan logika ini
+        # if model is None or class_names is None or df_pengobatan is None:
+        # Menjadi:
+        if class_names is None or df_pengobatan is None:
+            st.error("❌ Aplikasi belum siap: Daftar jenis jerawat atau data rekomendasi gagal dimuat.")
         elif img_data is None:
-            st.warning("Please upload or capture an image first.")
+            st.warning("Silakan unggah atau ambil gambar terlebih dahulu.")
         else:
-            with st.spinner("⏳ Analyzing your image. Please wait..."):
+            with st.spinner("⏳ Menganalisis gambar Anda. Mohon tunggu..."):
                 try:
-                    image = Image.open(io.BytesIO(img_data)).convert("RGB")
-                    size = (150, 150) # Matching model input_shape
-                    image = ImageOps.fit(image, size, Image.LANCZOS)
-                    image_array = np.asarray(image)
+                    # Logika prediksi dummy karena tidak ada model ML
+                    # Anda bisa membuat prediksi acak atau berdasarkan aturan sederhana
                     
-                    preprocessed_image_array = tf.keras.applications.efficientnet.preprocess_input(image_array.astype(np.float32))
-
-                    data = np.ndarray(shape=(1, 150, 150, 3), dtype=np.float32)
-                    data[0] = preprocessed_image_array
+                    # Simulasikan deteksi jenis jerawat secara acak
+                    # Pastikan list DUMMY_CLASS_NAMES sesuai dengan yang Anda inginkan
+                    # sebagai output prediksi.
+                    acne_class_raw_simulated = random.choice(DUMMY_CLASS_NAMES)
                     
-                    acne_prediction = model.predict(data)
+                    # Simulasikan skor kepercayaan acak
+                    acne_confidence_simulated = random.uniform(0.6, 0.99) # Skor kepercayaan yang cukup tinggi
+                    
+                    # Simulasikan array prediksi untuk bar chart
+                    num_classes_simulated = len(DUMMY_CLASS_NAMES)
+                    simulated_prediction_array = np.zeros((1, num_classes_simulated))
+                    # Isi satu indeks dengan confidence yang disimulasikan
+                    simulated_prediction_array[0, DUMMY_CLASS_NAMES.index(acne_class_raw_simulated)] = acne_confidence_simulated
+                    # Distribusikan sisa probabilitas ke kelas lain secara acak agar totalnya mendekati 1
+                    remaining_prob = 1.0 - acne_confidence_simulated
+                    if num_classes_simulated > 1:
+                        other_indices = [i for i, _ in enumerate(DUMMY_CLASS_NAMES) if i != DUMMY_CLASS_NAMES.index(acne_class_raw_simulated)]
+                        if len(other_indices) > 0:
+                            random_probs_others = np.random.dirichlet(np.ones(len(other_indices))) * remaining_prob
+                            for i, idx in enumerate(other_indices):
+                                simulated_prediction_array[0, idx] = random_probs_others[i]
                     
                     st.session_state['acne_prediction_results'] = {
-                        'prediction': acne_prediction,
-                        'img_data': img_data, # Simpan data gambar asli di session_state
-                        'skin_type': skin_type
+                        'prediction': simulated_prediction_array, # Gunakan array prediksi yang disimulasikan
+                        'img_data': img_data, 
+                        'skin_type': skin_type,
+                        'simulated_class_raw': acne_class_raw_simulated, # Simpan juga hasil simulasi mentah
+                        'simulated_confidence': acne_confidence_simulated # Simpan juga confidence simulasi
                     }
                     st.experimental_rerun()
                     
                 except Exception as e:
-                    st.error(f"❌ An error occurred during image processing or prediction: {e}")
-                    st.info("Ensure the image is clear and suitable for detection. Also check the console for error details.")
+                    st.error(f"❌ Terjadi kesalahan saat memproses gambar atau simulasi deteksi: {e}")
+                    st.info("Pastikan gambar jelas dan sesuai. Cek juga konsol untuk detail error.")
 
 with col_button_clear:
     if st.button("Restart / Clear", key="clear_button", use_container_width=True):
@@ -617,13 +583,15 @@ if 'acne_prediction_results' in st.session_state and st.session_state['acne_pred
     st.markdown("<h2 class='subheader'>✨ Your Skin Analysis Results</h2>", unsafe_allow_html=True)
     
     results = st.session_state['acne_prediction_results']
-    acne_prediction = results['prediction']
+    # Ambil hasil simulasi langsung
+    acne_prediction = results['prediction'] # Ini adalah array dummy untuk plot
     skin_type = results['skin_type']
-    original_img_data = results['img_data'] # Ambil data gambar dari session_state
+    original_img_data = results['img_data']
+    
+    # Ambil hasil simulasi langsung dari session_state
+    acne_class_raw = results['simulated_class_raw']
+    acne_confidence = results['simulated_confidence']
 
-    acne_index = np.argmax(acne_prediction)
-    acne_class_raw = class_names[acne_index].strip()
-    acne_confidence = acne_prediction[0][acne_index]
 
     acne_class_for_csv = acne_class_raw.lower()
     if acne_class_for_csv == 'blackheads': acne_class_for_csv = 'blackhead'
@@ -661,8 +629,10 @@ if 'acne_prediction_results' in st.session_state and st.session_state['acne_pred
 
     st.markdown("### Detail Prediction Score:")
     fig, ax = plt.subplots(figsize=(8, 4))
-    classes_display = [c.replace('lv0', 'No Acne').upper() for c in class_names]
-    confidences = acne_prediction[0]
+    
+    # Gunakan DUMMY_CLASS_NAMES untuk plot
+    classes_display = [c.replace('lv0', 'No Acne').upper() for c in DUMMY_CLASS_NAMES]
+    confidences = acne_prediction[0] # Menggunakan array prediksi yang disimulasikan
     
     sorted_indices = np.argsort(confidences)[::-1]
     sorted_classes = [classes_display[i] for i in sorted_indices]
@@ -670,7 +640,7 @@ if 'acne_prediction_results' in st.session_state and st.session_state['acne_pred
 
     ax.barh(sorted_classes, sorted_confidences, color='#A8DADC')
     ax.set_xlabel("Confidence Score")
-    ax.set_title("Probability Prediction of Acne Types")
+    ax.set_title("Probability Prediction of Acne Types (Simulated)") # Tambahkan (Simulated)
     ax.set_xlim(0, 1)
     for i, v in enumerate(sorted_confidences):
         ax.text(v + 0.02, i, f"{v:.2f}", color=plt.rcParams['text.color'], va='center')
